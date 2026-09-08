@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Automation cost calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F5F0;
+    --paper-alt:#EFEDE5;
+    --ink:#1B1B18;
+    --ink-soft:#5B584F;
+    --rule:#D9D5C8;
+    --teal:#0E6E55;
+    --teal-dark:#0A4F3E;
+    --teal-tint:#E1F0EA;
+    --amber:#B5651D;
+    --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  a{ color:var(--teal-dark); }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 28px 80px;
+  }
+
+  header.top{
+    padding:52px 28px 34px;
+    border-bottom:1px solid var(--rule);
+    margin-bottom:0;
+  }
+  header.top .inner{
+    max-width:1180px;
+    margin:0 auto;
+  }
+  header.top h1{
+    font-size:clamp(28px, 4vw, 40px);
+    font-weight:700;
+    letter-spacing:-0.01em;
+    margin:0 0 10px;
+    max-width:18ch;
+  }
+  header.top p{
+    font-size:16.5px;
+    color:var(--ink-soft);
+    max-width:62ch;
+    margin:0;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:0;
+    margin-top:0;
+    border-left:1px solid var(--rule);
+    border-right:1px solid var(--rule);
+  }
+  @media (max-width: 860px){
+    .layout{ grid-template-columns:1fr; }
+  }
+
+  .panel-inputs{
+    padding:36px 28px;
+    border-right:1px solid var(--rule);
+    background:var(--paper-alt);
+    position:sticky;
+    top:0;
+    align-self:start;
+  }
+  @media (max-width: 860px){
+    .panel-inputs{ position:static; border-right:none; border-bottom:1px solid var(--rule); }
+  }
+
+  .panel-inputs h2{
+    font-size:13px;
+    text-transform:none;
+    letter-spacing:0.02em;
+    color:var(--ink-soft);
+    margin:0 0 22px;
+    font-weight:600;
+  }
+
+  .field{ margin-bottom:22px; }
+  .field label{
+    display:block;
+    font-size:14.5px;
+    font-weight:500;
+    margin-bottom:6px;
+  }
+  .field .hint{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:5px;
+    line-height:1.4;
+  }
+  .field input[type="number"]{
+    width:100%;
+    padding:9px 11px;
+    border:1px solid var(--rule);
+    border-radius:3px;
+    font-size:15px;
+    background:var(--white);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .field input[type="number"]:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+    border-color:var(--teal);
+  }
+  .field input[type="range"]{
+    width:100%;
+    accent-color:var(--teal);
+  }
+  .workflow-count-display{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .workflow-count-display .val{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:22px;
+    font-weight:600;
+    color:var(--teal-dark);
+  }
+  .presets{
+    display:flex;
+    gap:6px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .presets button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    border:1px solid var(--rule);
+    background:var(--white);
+    color:var(--ink);
+    padding:5px 10px;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  .presets button:hover{ border-color:var(--teal); color:var(--teal-dark); }
+
+  details.advanced{
+    margin-top:8px;
+    border-top:1px solid var(--rule);
+    padding-top:16px;
+  }
+  details.advanced summary{
+    cursor:pointer;
+    font-size:13.5px;
+    color:var(--ink-soft);
+    font-weight:500;
+  }
+  details.advanced .field{ margin-top:16px; }
+
+  .panel-results{
+    padding:36px 32px 20px;
+  }
+  .panel-results h2{
+    font-size:13px;
+    color:var(--ink-soft);
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .summary-line{
+    font-size:15px;
+    color:var(--ink-soft);
+    margin:0 0 26px;
+  }
+  .summary-line strong{ color:var(--ink); font-weight:600; }
+
+  table.results{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14.5px;
+  }
+  table.results thead th{
+    text-align:left;
+    font-weight:600;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    padding:0 10px 10px 0;
+    border-bottom:1px solid var(--rule);
+  }
+  table.results thead th.num-col{ text-align:right; }
+  table.results tbody td{
+    padding:12px 10px 12px 0;
+    border-bottom:1px solid var(--rule);
+    vertical-align:middle;
+  }
+  table.results tbody tr.best td{ background:var(--teal-tint); }
+  table.results tbody tr.best td:first-child{ box-shadow: inset 3px 0 0 var(--teal); }
+  .platform-name{ font-weight:600; }
+  .hosting-tag{
+    display:inline-block;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    border:1px solid var(--rule);
+    border-radius:3px;
+    padding:1px 6px;
+    margin-top:3px;
+  }
+  .cost-cell{
+    text-align:right;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:15.5px;
+    white-space:nowrap;
+  }
+  .cost-cell.na{ color:var(--ink-soft); font-weight:400; font-size:13.5px; }
+
+  .cost-tooltip{
+    position:relative;
+    cursor:help;
+    border-bottom:1px dotted var(--ink-soft);
+    outline:none;
+  }
+  .cost-tooltip::after{
+    content:attr(data-detail);
+    position:absolute;
+    bottom:125%;
+    right:0;
+    width:290px;
+    max-width:60vw;
+    background:var(--ink);
+    color:#F6F5F0;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:400;
+    font-size:12.5px;
+    line-height:1.55;
+    text-align:left;
+    white-space:normal;
+    padding:11px 13px;
+    border-radius:4px;
+    box-shadow:0 6px 18px rgba(0,0,0,.22);
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(4px);
+    transition:opacity .12s ease, transform .12s ease;
+    z-index:30;
+  }
+  .cost-tooltip:hover::after,
+  .cost-tooltip:focus::after{
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0);
+  }
+  @media (max-width: 640px){
+    .cost-tooltip::after{ right:auto; left:0; width:230px; }
+  }
+
+  .platform-name-btn{
+    font:inherit;
+    font-weight:600;
+    background:none;
+    border:none;
+    padding:0;
+    margin:0;
+    color:var(--ink);
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-color:var(--rule);
+    text-decoration-thickness:1px;
+    text-underline-offset:3px;
+  }
+  .platform-name-btn:hover{ color:var(--teal-dark); text-decoration-color:var(--teal); }
+
+  .modal-overlay{
+    position:fixed;
+    top:0; right:0; bottom:0; left:0;
+    background:rgba(27,27,24,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    z-index:100;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-panel{
+    background:var(--paper);
+    border:1px solid var(--rule);
+    border-radius:6px;
+    max-width:560px;
+    width:100%;
+    max-height:82vh;
+    overflow-y:auto;
+    padding:28px 30px 26px;
+    box-shadow:0 20px 50px rgba(0,0,0,.28);
+  }
+  .modal-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:6px;
+  }
+  .modal-panel h3{
+    font-size:22px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .modal-close{
+    background:none;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    width:30px;
+    height:30px;
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    color:var(--ink-soft);
+    flex:none;
+  }
+  .modal-close:hover{ border-color:var(--teal); color:var(--teal-dark); }
+  .modal-sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0 0 18px;
+  }
+  .modal-panel ul{
+    margin:0;
+    padding-left:20px;
+  }
+  .modal-panel li{
+    font-size:14.5px;
+    line-height:1.6;
+    margin-bottom:10px;
+  }
+  .modal-panel li:last-child{ margin-bottom:0; }
+  .bar-cell{ width:38%; }
+  .bar-track{
+    background:var(--paper-alt);
+    border:1px solid var(--rule);
+    border-radius:2px;
+    height:9px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    background:var(--ink-soft);
+  }
+  tr.best .bar-fill{ background:var(--teal); }
+  .badge-best{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    color:var(--teal-dark);
+    background:#CFE9DE;
+    border-radius:3px;
+    padding:1px 7px;
+    margin-left:8px;
+  }
+  .est-star{ color:var(--amber); cursor:help; }
+
+  .foot-note{
+    margin-top:28px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    border-top:1px solid var(--rule);
+    padding-top:16px;
+  }
+
+  footer.page{
+    max-width:1180px;
+    margin:36px auto 0;
+    padding:0 28px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <h1>What does your automation actually cost, per platform?</h1>
+    <p>Describe one workflow and how many of it you're running. The table updates as you type, ranking every platform by estimated monthly cost — cloud and self-hosted, side by side.</p>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+  <div class="panel-inputs">
+    <h2>Describe the workflow</h2>
+
+    <div class="field">
+      <label for="leadsPerDay">Emails / leads received per day</label>
+      <input type="number" id="leadsPerDay" value="50" min="1" step="1">
+      <div class="hint">Per single workflow — this gets multiplied by the workflow count below.</div>
+    </div>
+
+    <div class="field">
+      <label for="stepsPerEmail">Processing steps per email</label>
+      <input type="number" id="stepsPerEmail" value="9" min="1" step="1">
+      <div class="hint">Count every action: parsing, lookups, branching, notifications. Drives per-step billing (Make, Zapier).</div>
+    </div>
+
+    <div class="field">
+      <label for="aiCallsPerEmail">AI / LLM calls per email</label>
+      <input type="number" id="aiCallsPerEmail" value="4" min="0" step="1">
+      <div class="hint">Research, qualification, retrieval-answer, drafting — each one that hits an LLM.</div>
+    </div>
+
+    <div class="field">
+      <div class="workflow-count-display">
+        <label for="workflowCount" style="margin-bottom:0;">Number of workflows like this</label>
+        <span class="val" id="workflowCountVal">1</span>
+      </div>
+      <input type="range" id="workflowCount" min="1" max="30" value="1" step="1">
+      <div class="presets">
+        <button type="button" data-count="1">1</button>
+        <button type="button" data-count="5">5</button>
+        <button type="button" data-count="10">10</button>
+        <button type="button" data-count="15">15</button>
+      </div>
+    </div>
+
+    <details class="advanced">
+      <summary>Advanced assumptions</summary>
+      <div class="field">
+        <label for="creditsPerAi">Credits per AI call (Lindy / Gumloop / Relay.app)</label>
+        <input type="number" id="creditsPerAi" value="8" min="1" step="1">
+        <div class="hint">These platforms bill in opaque "credits," not raw call counts. This is an adjustable estimate — confirm with the vendor for a real quote.</div>
+      </div>
+    </details>
+  </div>
+
+  <div class="panel-results">
+    <h2>Estimated monthly cost, ranked</h2>
+    <p class="summary-line" id="summaryLine"></p>
+
+    <table class="results">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th class="bar-cell">Relative cost</th>
+          <th class="num-col">Est. / month</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+      </tbody>
+    </table>
+
+    <p class="foot-note">
+      Figures are directional estimates built from each vendor's publicly listed pricing structure and billing unit — not live quotes. Rows marked <span class="est-star">*</span> are especially rough: credit-based and usage-based platforms don't publish a simple formula, so treat those as order-of-magnitude only and confirm directly with the vendor. All figures exclude your own LLM API costs (OpenAI, Anthropic, etc.), which are billed separately by the model provider regardless of which automation platform you choose. Self-hosted rows price a real VPS tier (OVHcloud, Contabo, sized to your volume — hover a self-hosted cost to see which) rather than a formula estimate; they assume you already have — or are willing to set up — a small self-managed server, and VPS prices do change, so double-check the provider's current page before committing. Activepieces pricing assumes you bring your own AI API key (1 credit per AI step; without one, AI steps cost 2–20 credits depending on model). Its self-hosted Community Edition (marked with an asterisk) is free and uncapped but doesn't include the packaged AI-agent builder — AI steps there need to be wired in as a plain HTTP action instead.
+    </p>
+  </div>
+
+</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h3 id="modalTitle">Platform</h3>
+      <button type="button" class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    </div>
+    <p class="modal-sub">Every published pricing tier — fixed, independent of the numbers on the left.</p>
+    <ul id="modalList"></ul>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const leadsPerDayEl = $('leadsPerDay');
+  const stepsPerEmailEl = $('stepsPerEmail');
+  const aiCallsPerEmailEl = $('aiCallsPerEmail');
+  const workflowCountEl = $('workflowCount');
+  const workflowCountVal = $('workflowCountVal');
+  const creditsPerAiEl = $('creditsPerAi');
+  const summaryLine = $('summaryLine');
+  const resultsBody = $('resultsBody');
+
+  function fmt(n){
+    if (n === null) return null;
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+  function fmtNum(n){
+    return Math.round(n).toLocaleString('en-US');
+  }
+
+  // Prices the next REAL known tier at or above usage — no interpolation, no invented
+  // in-between sizes. If usage falls between two published prices, you pay for the higher
+  // one, because that's the tier you'd actually have to buy.
+  // points: [[volume, price], ...] known/verified prices, ascending by volume.
+  function tierCeilingDetail(volume, freeCap, points, unit){
+    if (volume <= freeCap){
+      return { cost:0, detail: fmtNum(volume) + ' ' + unit + ' is within the free allowance (up to ' + fmtNum(freeCap) + ') \u2192 $0/mo.' };
+    }
+    for (const [v, p] of points){
+      if (volume <= v){
+        return { cost:p, detail: fmtNum(volume) + ' ' + unit + '/mo doesn\u2019t fit a smaller published tier, so it needs the ' + fmtNum(v) + '-' + unit + ' tier \u2192 $' + p + '/mo (the next tier up, not a blended estimate).' };
+      }
+    }
+    const [vA, pA] = points[points.length - 2];
+    const [vB, pB] = points[points.length - 1];
+    const slope = (pB - pA) / (vB - vA);
+    const cost = pB + slope * (volume - vB);
+    return { cost, detail: fmtNum(volume) + ' ' + unit + '/mo is beyond the highest published tier (' + fmtNum(vB) + ' ' + unit + ' \u2192 $' + pB + '/mo) \u2014 extrapolating at that tier\u2019s rate \u2248 $' + cost.toFixed(2) + '/mo. Get an exact quote at this volume.' };
+  }
+
+  // Discrete named tiers, with a plain-language explanation. tiers: [[cap, price, name], ...] ascending.
+  function steppedTierDetail(volume, tiers, unit){
+    for (const [cap, price, name] of tiers){
+      if (volume <= cap){
+        return { cost:price, detail: fmtNum(volume) + ' ' + unit + '/month fits the ' + name + ' tier\u2019s cap of ' + fmtNum(cap) + ' ' + unit + ' \u2192 flat $' + price + '/mo.' };
+      }
+    }
+    const last = tiers[tiers.length - 1];
+    return { cost:null, detail: fmtNum(volume) + ' ' + unit + '/month exceeds every published tier (up to ' + fmtNum(last[0]) + ') \u2192 needs custom/enterprise pricing.' };
+  }
+
+  // Real VPS tiers (verified provider pricing, Sept 2026) — picks the cheapest real plan
+  // that comfortably covers the monthly execution volume, instead of a synthetic formula.
+  const VPS_TIERS = [
+    { cap: 3000,  price: 3.50, name: 'OVHcloud Starter',        specs: '1 vCPU / 2GB RAM / 20GB SSD' },
+    { cap: 25000, price: 6.99, name: 'Contabo VPS S',           specs: '4 vCPU / 8GB RAM / 50GB NVMe' },
+    { cap: 60000, price: 25,   name: 'OVHcloud General Purpose', specs: '4 vCPU / 15GB RAM / 100GB SSD' }
+  ];
+  function vpsCostDetail(monthlyRuns){
+    for (const t of VPS_TIERS){
+      if (monthlyRuns <= t.cap){
+        return { cost: t.price, detail: fmtNum(monthlyRuns) + ' executions/mo comfortably fits a ' + t.name + ' (' + t.specs + ') at $' + t.price + '/mo. Real current provider pricing, not a formula estimate \u2014 confirm on the provider\u2019s site as rates do change.' };
+      }
+    }
+    const last = VPS_TIERS[VPS_TIERS.length - 1];
+    return { cost: last.price, detail: fmtNum(monthlyRuns) + ' executions/mo is beyond what\u2019s sized here \u2014 step up to an 8+ vCPU / 16GB+ RAM box and get a current quote from your provider.' };
+  }
+
+  const PRICING_INFO = {
+    'n8n': [
+      'Community Edition (self-hosted): Free, unlimited workflows & executions \u2014 you pay only for the server.',
+      'Cloud Starter: \u2248 $20\u201324/mo \u2014 2,500 executions/mo',
+      'Cloud Pro: \u2248 $50\u201360/mo \u2014 10,000 executions/mo, or \u2248 $132/mo (\u00a3120) for a higher 50,000 executions/mo tier',
+      'Cloud Business: \u2248 $667\u2013800/mo \u2014 40,000 executions/mo \u2014 priced for its extra features (SSO, Git, environments), not for lower cost per execution',
+      'Enterprise (self-hosted license): Custom \u2014 SSO, audit logs, dedicated support'
+    ],
+    'Make': [
+      'Free: $0 \u2014 1,000 operations/mo, 2 active scenarios',
+      'Core: $9\u201310.59/mo \u2014 10,000 operations/mo',
+      'Pro: $16\u201318.82/mo \u2014 10,000 operations/mo, priority execution',
+      'Teams: $29\u201334.12/mo per user \u2014 10,000 operations/mo, collaboration features',
+      'Enterprise: Custom \u2014 SSO, overage protection, 24/7 support',
+      'Operations scale roughly linearly beyond the entry tiers: ~50,000 ops \u2248 $36/mo \u00b7 ~100,000 \u2248 $63/mo \u00b7 ~500,000 \u2248 $237/mo \u00b7 ~1,000,000 \u2248 $400+/mo'
+    ],
+    'Zapier': [
+      'Free: $0 \u2014 100 tasks/mo, 2-step Zaps only',
+      'Professional: from $19/mo (750 tasks) \u2014 full task-tier ladder (annual billing): 1,500 \u2248 $39/mo \u00b7 2,000 \u2248 $49/mo \u00b7 5,000 \u2248 $89/mo \u00b7 10,000 \u2248 $120/mo \u00b7 20,000 \u2248 $189/mo \u00b7 50,000 \u2248 $289/mo \u00b7 100,000 \u2248 $489/mo \u00b7 500,000 \u2248 $1,499/mo \u00b7 1,000,000 \u2248 $2,199/mo \u00b7 2,000,000 \u2248 $3,389/mo',
+      'Team: from $69/mo (2,000 tasks) \u2014 25 seats, shared connections, SSO',
+      'Enterprise: Custom \u2014 unlimited seats, advanced admin'
+    ],
+    'Activepieces': [
+      'Community Edition (self-hosted): Free, MIT license, unlimited flows/runs/users \u2014 but no packaged AI-agent builder, Projects, API access, or team/admin layer (SSO, roles, audit logs).',
+      'Free (cloud): $0 \u2014 100 credits/day, resets daily, no rollover',
+      'Plus: $16/mo (billed yearly) \u2014 10,000 credits/mo, up to 5 users, bring-your-own AI keys included, $0.007 per extra credit',
+      'Team: $166/mo (billed yearly) \u2014 50,000 credits/mo, 25 users included then $25/user/mo, SSO',
+      'Ultimate: Custom \u2014 credits pooled yearly, SCIM, custom RBAC, audit logs, dedicated support',
+      '1 credit = 1 flow run regardless of step count. An AI step adds 2/10/20 credits depending on model tier, or just 1 credit if you bring your own API key.'
+    ],
+    'Pipedream': [
+      'Free: $0 \u2014 100 credits/mo, capped at 3 active workflows and 3 connected accounts',
+      'Basic: $29/mo \u2014 2,000 credits/mo, up to 10 active workflows, 5 connected accounts',
+      'Advanced: $49/mo \u2014 2,000 credits/mo (same allowance as Basic), but unlimited workflows and accounts',
+      'Connect: $99/mo \u2014 10,000 credits/mo, adds production Connect API and external-user auth',
+      'Business: Custom \u2014 volume credit pricing, SSO, HIPAA, SLAs',
+      '1 credit = 30 seconds of compute at 256MB memory, billed by execution time \u2014 not step count. A workflow chaining several sequential LLM calls burns credits fast even with few steps.'
+    ],
+    'Windmill': [
+      'Self-hosted: Free, open-source \u2014 server cost only',
+      'Cloud: usage-based, priced per workspace \u2014 contact vendor for a volume quote'
+    ],
+    'Flowise': [
+      'Self-hosted: Free, open-source (npm or Docker) \u2014 server cost only, plus your own LLM API costs either way',
+      'Free (cloud): $0 \u2014 2 flows, 100 predictions/mo',
+      'Starter: $35/mo \u2014 unlimited flows, 10,000 predictions/mo',
+      'Pro: $65/mo \u2014 50,000 predictions/mo',
+      'Enterprise: Custom'
+    ],
+    'Lindy': [
+      'Free: 400 credits/mo',
+      'Pro: $49.99/mo \u2014 5,000 credits/mo',
+      'Higher tier: $299.99/mo \u2014 30,000 credits/mo',
+      'Enterprise: Custom',
+      'Credit consumption per task varies with complexity \u2014 not a fixed 1-credit-per-action model.'
+    ],
+    'Gumloop': [
+      'Free: 2,000 credits + 1 trigger',
+      'Starter: $37/mo \u2014 10,000 credits/mo',
+      'Pro: $97/mo \u2014 higher credit allotment',
+      'Team: $244/mo \u2014 60,000+ credits/mo',
+      'Enterprise: Custom'
+    ],
+    'Relay.app': [
+      'Free: limited usage, for evaluation only',
+      'Entry tier: \u2248 $38/mo \u2014 ~5,000 credits/mo, billed on steps + AI credits combined',
+      'Two further tiers scale credits, steps, and collaboration/approval features',
+      'Enterprise-level: custom pricing'
+    ]
+  };
+
+  function compute(){
+    const leadsPerDay = Math.max(0, parseFloat(leadsPerDayEl.value) || 0);
+    const stepsPerEmail = Math.max(0, parseFloat(stepsPerEmailEl.value) || 0);
+    const aiCallsPerEmail = Math.max(0, parseFloat(aiCallsPerEmailEl.value) || 0);
+    const count = Math.max(1, parseInt(workflowCountEl.value, 10) || 1);
+    const creditsPerAi = Math.max(1, parseFloat(creditsPerAiEl.value) || 8);
+
+    const monthlyLeads = leadsPerDay * 30 * count;      // = executions for n8n / Pipedream / self-hosted sizing
+    const monthlySteps = monthlyLeads * stepsPerEmail;  // Make ops / Zapier tasks
+    const monthlyAiCalls = monthlyLeads * aiCallsPerEmail; // Flowise predictions
+    const monthlyCredits = monthlyAiCalls * creditsPerAi;  // Lindy / Gumloop / Relay.app
+
+    workflowCountVal.textContent = count;
+
+    summaryLine.innerHTML =
+      '<strong>' + fmtNum(monthlyLeads) + '</strong> emails/month across <strong>' + count + '</strong> workflow' + (count === 1 ? '' : 's') +
+      ' &middot; <strong>' + fmtNum(monthlySteps) + '</strong> billable steps/month' +
+      ' &middot; <strong>' + fmtNum(monthlyAiCalls) + '</strong> AI calls/month';
+
+    const rows = [];
+
+    // n8n
+    // n8n Cloud — Business costs more than Pro's higher-volume option for less capacity
+    // (its price is for SSO/Git/environments, not lower cost per execution), so this picks
+    // whichever covering tier is actually cheapest rather than just the first by volume.
+    const n8nCloudTiers = [[2500, 22, 'Starter'], [10000, 55, 'Pro (10K)'], [50000, 132, 'Pro (50K)'], [40000, 733, 'Business (40K)']];
+    const n8nCovering = n8nCloudTiers.filter(t => monthlyLeads <= t[0]);
+    let n8nCloud;
+    if (n8nCovering.length === 0){
+      n8nCloud = { cost: null, detail: fmtNum(monthlyLeads) + ' executions/mo exceeds every published Cloud tier (up to 50,000) \u2192 needs Enterprise (custom pricing).' };
+    } else {
+      const cheapest = n8nCovering.reduce((best, t) => t[1] < best[1] ? t : best, n8nCovering[0]);
+      const note = cheapest[2].indexOf('Business') === 0 ? ' Business exists for its extra features (SSO, Git, environments), not lower cost.' : '';
+      n8nCloud = { cost: cheapest[1], detail: fmtNum(monthlyLeads) + ' executions/mo \u2192 cheapest covering tier is ' + cheapest[2] + ' (cap ' + fmtNum(cheapest[0]) + ') \u2192 $' + cheapest[1] + '/mo.' + note };
+    }
+    rows.push({ platform:'n8n', hosting:'Cloud', cost: n8nCloud.cost, detail: n8nCloud.detail, est:false });
+    const n8nSelf = vpsCostDetail(monthlyLeads);
+    rows.push({ platform:'n8n', hosting:'Self-hosted (+ VPS)', cost: n8nSelf.cost, detail: n8nSelf.detail, est:true });
+
+    // Make (operations) — pays for the next published tier at or above usage, no blending.
+    const makePoints = [[10000, 10], [50000, 36], [100000, 63], [500000, 237], [1000000, 400]];
+    const make = tierCeilingDetail(monthlySteps, 1000, makePoints, 'operations');
+    rows.push({ platform:'Make', hosting:'Cloud only', cost: make.cost, detail: make.detail, est:false });
+
+    // Zapier (tasks) — same rule: pays for the next published tier at or above usage.
+    const zapierPoints = [[750, 19], [1500, 39], [2000, 49], [5000, 89], [10000, 120], [20000, 189], [50000, 289], [100000, 489], [200000, 769], [300000, 1069], [400000, 1269], [500000, 1499], [750000, 1999], [1000000, 2199], [1250000, 2599], [1500000, 2999], [1750000, 3199], [2000000, 3389]];
+    const zapier = tierCeilingDetail(monthlySteps, 100, zapierPoints, 'tasks');
+    rows.push({ platform:'Zapier', hosting:'Cloud only', cost: zapier.cost, detail: zapier.detail, est:false });
+
+    // Activepieces — credit-based since Aug 2026: 1 credit per run + 1 credit per AI step (own API key)
+    const apCreditsPerEmail = 1 + aiCallsPerEmail;
+    const apDailyCredits = leadsPerDay * count * apCreditsPerEmail;
+    const apMonthlyCredits = monthlyLeads * apCreditsPerEmail;
+    let apCost, apDetail;
+    if (apDailyCredits <= 100){
+      apCost = 0;
+      apDetail = fmtNum(apDailyCredits) + ' credits/day (1 per email run + ' + aiCallsPerEmail + ' per AI step with your own key) is within the Free plan\u2019s 100/day allowance \u2192 $0/mo.';
+    } else {
+      const plusCost = 16 + Math.max(0, apMonthlyCredits - 10000) * 0.007;
+      const teamCost = 166 + Math.max(0, apMonthlyCredits - 50000) * 0.007;
+      apCost = Math.min(plusCost, teamCost);
+      const chosen = plusCost <= teamCost ? 'Plus' : 'Team';
+      apDetail = fmtNum(apMonthlyCredits) + ' credits/mo (' + apCreditsPerEmail + '/email: 1 run + ' + aiCallsPerEmail + ' AI steps \u00d7 1 credit). Plus: $16 + ' + fmtNum(Math.max(0, apMonthlyCredits-10000)) + ' extra \u00d7 $0.007 = $' + plusCost.toFixed(2) + '/mo. Team: $166 + ' + fmtNum(Math.max(0, apMonthlyCredits-50000)) + ' extra \u00d7 $0.007 = $' + teamCost.toFixed(2) + '/mo. Cheaper: ' + chosen + ' \u2248 $' + apCost.toFixed(2) + '/mo.';
+    }
+    rows.push({ platform:'Activepieces', hosting:'Cloud (Plus/Team)', cost: apCost, detail: apDetail, est:false });
+    const apSelf = vpsCostDetail(monthlyLeads);
+    rows.push({ platform:'Activepieces', hosting:'Self-hosted (+ VPS)*', cost: apSelf.cost, detail: apSelf.detail + ' No credit meter at all self-hosted \u2014 but the packaged AI-agent builder isn\u2019t included; AI steps go through a plain HTTP action instead.', est:true });
+
+    // Flowise (predictions = AI calls)
+    const flowiseTiers = [[100, 0, 'Free'], [10000, 35, 'Starter'], [50000, 65, 'Pro']];
+    let flowise = steppedTierDetail(monthlyAiCalls, flowiseTiers, 'predictions');
+    let flowiseCustom = false;
+    if (flowise.cost === null){
+      const cost = 65 + (monthlyAiCalls - 50000) * 0.0013;
+      flowise = { cost, detail: fmtNum(monthlyAiCalls) + ' predictions/mo is beyond the Pro tier\u2019s 50,000 cap ($65/mo). Extrapolating at Pro\u2019s rate (\u2248$0.0013/prediction): $65 + ' + fmtNum(monthlyAiCalls-50000) + ' \u00d7 $0.0013 \u2248 $' + cost.toFixed(2) + '/mo.' };
+      flowiseCustom = true;
+    }
+    rows.push({ platform:'Flowise', hosting:'Cloud', cost: flowise.cost, detail: flowise.detail, est: flowiseCustom });
+    const flowiseSelf = vpsCostDetail(monthlyLeads);
+    rows.push({ platform:'Flowise', hosting:'Self-hosted (+ VPS)', cost: flowiseSelf.cost, detail: flowiseSelf.detail, est:true });
+
+    // Pipedream — real tiers: Free 100cr/3 workflows, Basic $29=2000cr/10wf, Advanced $49=2000cr/unlimited wf,
+    // Connect $99=10000cr, beyond that extrapolated at ~$0.01/credit (Connect's own effective rate).
+    // 1 credit = 30 sec compute; this workflow's chained LLM calls are assumed to need ~2 credits/email.
+    const pdCreditsPerEmail = 2;
+    const pdMonthlyCredits = monthlyLeads * pdCreditsPerEmail;
+    let pipedream, pipedreamDetail;
+    const pdBase = fmtNum(pdMonthlyCredits) + ' credits/mo (' + fmtNum(monthlyLeads) + ' emails \u00d7 ' + pdCreditsPerEmail + ' credits, \u2248 1 credit per 30s of chained LLM calls). ';
+    if (pdMonthlyCredits <= 100 && count <= 3){
+      pipedream = 0;
+      pipedreamDetail = pdBase + 'Fits the Free plan (100 credits/mo, \u2264 3 workflows) \u2192 $0/mo.';
+    } else if (pdMonthlyCredits <= 2000 && count <= 10){
+      pipedream = 29;
+      pipedreamDetail = pdBase + 'Fits Basic (2,000 credits/mo, \u2264 10 workflows) \u2192 $29/mo.';
+    } else if (pdMonthlyCredits <= 2000){
+      pipedream = 49;
+      pipedreamDetail = pdBase + 'Exceeds Basic\u2019s 10-workflow cap, but fits its 2,000 credits \u2192 needs Advanced (unlimited workflows) \u2192 $49/mo.';
+    } else if (pdMonthlyCredits <= 10000){
+      pipedream = 99;
+      pipedreamDetail = pdBase + 'Exceeds the 2,000-credit Basic/Advanced allowance \u2192 needs Connect (10,000 credits/mo) \u2192 $99/mo.';
+    } else {
+      pipedream = 99 + (pdMonthlyCredits - 10000) * 0.01;
+      pipedreamDetail = pdBase + 'Exceeds Connect\u2019s 10,000 credits \u2192 Business tier (custom). Rough estimate at Connect\u2019s own rate (\u2248$0.01/credit): $99 + ' + fmtNum(pdMonthlyCredits-10000) + ' \u00d7 $0.01 \u2248 $' + pipedream.toFixed(2) + '/mo \u2014 confirm with Pipedream sales.';
+    }
+    rows.push({ platform:'Pipedream', hosting:'Cloud only', cost: pipedream, detail: pipedreamDetail, est: pdMonthlyCredits > 10000 });
+
+    // Windmill (self-hosted realistic path)
+    const windmill = vpsCostDetail(monthlyLeads);
+    rows.push({ platform:'Windmill', hosting:'Self-hosted (+ VPS)', cost: windmill.cost, detail: windmill.detail, est:true });
+
+    // Lindy (credits)
+    const lindyTiers = [[400, 0, 'Free'], [5000, 49.99, 'Pro'], [30000, 299.99, 'Higher']];
+    let lindy = steppedTierDetail(monthlyCredits, lindyTiers, 'credits');
+    if (lindy.cost === null){
+      const cost = 299.99 + (monthlyCredits - 30000) * 0.01;
+      lindy = { cost, detail: fmtNum(monthlyCredits) + ' credits/mo (' + fmtNum(monthlyAiCalls) + ' AI calls \u00d7 ' + creditsPerAi + ' credits/call estimate) is beyond the top published tier. Extrapolating at \u2248$0.01/credit: $299.99 + ' + fmtNum(monthlyCredits-30000) + ' \u00d7 $0.01 \u2248 $' + cost.toFixed(2) + '/mo.' };
+    } else {
+      lindy.detail = fmtNum(monthlyAiCalls) + ' AI calls \u00d7 ' + creditsPerAi + ' credits/call (your estimate) = ' + lindy.detail;
+    }
+    rows.push({ platform:'Lindy', hosting:'Cloud only', cost: lindy.cost, detail: lindy.detail, est:true });
+
+    // Gumloop (credits)
+    const gumloopTiers = [[2000, 0, 'Free'], [10000, 37, 'Starter'], [30000, 97, 'Pro'], [60000, 244, 'Team']];
+    let gumloop = steppedTierDetail(monthlyCredits, gumloopTiers, 'credits');
+    if (gumloop.cost === null){
+      const cost = 244 + (monthlyCredits - 60000) * 0.0049;
+      gumloop = { cost, detail: fmtNum(monthlyCredits) + ' credits/mo is beyond the top published tier. Extrapolating at \u2248$0.0049/credit: $244 + ' + fmtNum(monthlyCredits-60000) + ' \u00d7 $0.0049 \u2248 $' + cost.toFixed(2) + '/mo.' };
+    } else {
+      gumloop.detail = fmtNum(monthlyAiCalls) + ' AI calls \u00d7 ' + creditsPerAi + ' credits/call (your estimate) = ' + gumloop.detail;
+    }
+    rows.push({ platform:'Gumloop', hosting:'Cloud only', cost: gumloop.cost, detail: gumloop.detail, est:true });
+
+    // Relay.app (credits, thin published ladder — roughest estimate of the set)
+    const relayTiers = [[500, 0, 'Free'], [5000, 38, 'Entry']];
+    let relay = steppedTierDetail(monthlyCredits, relayTiers, 'credits');
+    if (relay.cost === null){
+      const cost = 38 + (monthlyCredits - 5000) * 0.003;
+      relay = { cost, detail: fmtNum(monthlyCredits) + ' credits/mo is beyond Relay\u2019s published Entry tier. Very rough extrapolation at \u2248$0.003/credit: $38 + ' + fmtNum(monthlyCredits-5000) + ' \u00d7 $0.003 \u2248 $' + cost.toFixed(2) + '/mo.' };
+    } else {
+      relay.detail = fmtNum(monthlyAiCalls) + ' AI calls \u00d7 ' + creditsPerAi + ' credits/call (your estimate) = ' + relay.detail;
+    }
+    rows.push({ platform:'Relay.app', hosting:'Cloud only', cost: relay.cost, detail: relay.detail, est:true });
+
+    // Sort by cost ascending; null/custom-pricing rows go to the bottom.
+    rows.sort((a, b) => {
+      if (a.cost === null && b.cost === null) return 0;
+      if (a.cost === null) return 1;
+      if (b.cost === null) return -1;
+      return a.cost - b.cost;
+    });
+
+    const maxCost = Math.max(...rows.filter(r => r.cost !== null).map(r => r.cost), 1);
+
+    resultsBody.innerHTML = '';
+    rows.forEach((r, idx) => {
+      const tr = document.createElement('tr');
+      const isBest = idx === 0 && r.cost !== null;
+      if (isBest) tr.className = 'best';
+
+      const nameTd = document.createElement('td');
+      const nameWrap = document.createElement('div');
+      const nameBtn = document.createElement('button');
+      nameBtn.type = 'button';
+      nameBtn.className = 'platform-name-btn';
+      nameBtn.textContent = r.platform;
+      nameBtn.dataset.platform = r.platform;
+      nameWrap.appendChild(nameBtn);
+      if (isBest){
+        const badge = document.createElement('span');
+        badge.className = 'badge-best';
+        badge.textContent = 'Cheapest here';
+        nameWrap.appendChild(badge);
+      }
+      const hostTag = document.createElement('span');
+      hostTag.className = 'hosting-tag';
+      hostTag.style.display = 'block';
+      hostTag.style.marginTop = '3px';
+      hostTag.textContent = r.hosting;
+      nameTd.appendChild(nameWrap);
+      nameTd.appendChild(hostTag);
+      tr.appendChild(nameTd);
+
+      const barTd = document.createElement('td');
+      barTd.className = 'bar-cell';
+      const track = document.createElement('div');
+      track.className = 'bar-track';
+      const fill = document.createElement('div');
+      fill.className = 'bar-fill';
+      const pct = r.cost === null ? 0 : Math.max(2, (r.cost / maxCost) * 100);
+      fill.style.width = pct + '%';
+      track.appendChild(fill);
+      barTd.appendChild(track);
+      tr.appendChild(barTd);
+
+      const costTd = document.createElement('td');
+      costTd.className = r.cost === null ? 'cost-cell na' : 'cost-cell';
+      const tip = document.createElement('span');
+      tip.className = 'cost-tooltip';
+      tip.tabIndex = 0;
+      tip.dataset.detail = r.detail || '';
+      tip.textContent = r.cost === null ? 'Custom pricing' : fmt(r.cost);
+      costTd.appendChild(tip);
+      if (r.cost !== null && r.est){
+        const star = document.createElement('span');
+        star.className = 'est-star';
+        star.textContent = ' *';
+        star.title = 'Rough estimate — confirm with vendor';
+        costTd.appendChild(star);
+      }
+      tr.appendChild(costTd);
+
+      resultsBody.appendChild(tr);
+    });
+  }
+
+  // Modal: click a platform name to see its fixed pricing tiers.
+  const modalOverlay = $('modalOverlay');
+  const modalTitle = $('modalTitle');
+  const modalList = $('modalList');
+  const modalClose = $('modalClose');
+
+  function openModal(platform){
+    const items = PRICING_INFO[platform];
+    if (!items) return;
+    modalTitle.textContent = platform;
+    modalList.innerHTML = '';
+    items.forEach(text => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      modalList.appendChild(li);
+    });
+    modalOverlay.classList.add('open');
+  }
+  function closeModal(){ modalOverlay.classList.remove('open'); }
+
+  resultsBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.platform-name-btn');
+    if (btn) openModal(btn.dataset.platform);
+  });
+  modalClose.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  [leadsPerDayEl, stepsPerEmailEl, aiCallsPerEmailEl, creditsPerAiEl].forEach(el => {
+    el.addEventListener('input', compute);
+  });
+  workflowCountEl.addEventListener('input', compute);
+  document.querySelectorAll('.presets button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      workflowCountEl.value = btn.getAttribute('data-count');
+      compute();
+    });
+  });
+
+  compute();
+})();
+</script>
+
+</body>
+</html>
